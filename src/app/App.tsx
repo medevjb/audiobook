@@ -5,6 +5,7 @@ import { PdfViewer } from '../components/PdfViewer/PdfViewer'
 import { PlayerControls } from '../components/Player/PlayerControls'
 import { ReaderText } from '../components/ReaderText/ReaderText'
 import { HomeScreen } from '../components/Upload/HomeScreen'
+import { hasNextPage, hasPreviousPage } from '../utils/page'
 import { usePdf } from '../hooks/usePdf'
 import { useSpeech } from '../hooks/useSpeech'
 import { useBookStore } from '../store/bookStore'
@@ -17,7 +18,7 @@ import { useSpeechStore } from '../store/speechStore'
  */
 export function App() {
   const { openFile, renderPage, extractPage, closeBook } = usePdf()
-  const { play, stop } = useSpeech()
+  const { play, pause, resume, stop } = useSpeech()
 
   const book = useBookStore((state) => state.current)
   const bookId = book?.bookId
@@ -91,7 +92,18 @@ export function App() {
               render={renderPage}
               onNavigate={handleNavigate}
             />
-            <PlayerControls playback={playback} canPlay={canPlay} onPlay={play} onStop={stop} />
+            <PlayerControls
+              playback={playback}
+              canPlay={canPlay}
+              hasPrevious={hasPreviousPage(currentPage)}
+              hasNext={hasNextPage(currentPage, totalPages)}
+              onPlay={play}
+              onPause={pause}
+              onResume={resume}
+              onStop={stop}
+              onPrevious={() => handleNavigate(currentPage - 1)}
+              onNext={() => handleNavigate(currentPage + 1)}
+            />
             <ReaderText pageText={pageText} />
           </>
         ) : (

@@ -10,10 +10,10 @@ import { toAppError } from '../utils/errors'
 /**
  * Owns the TTSProvider instance and drives playback state (PRD §14/§16).
  *
- * Milestone 6 scope: the page's text is split into chunks (PRD §15) and
- * spoken one utterance at a time, each chunk's `onEnd` triggering the next —
- * never one long utterance for a whole page, which is unreliable across
- * browsers and impossible to pause or highlight mid-page.
+ * The page's text is split into chunks (PRD §15) and spoken one utterance at
+ * a time, each chunk's `onEnd` triggering the next — never one long utterance
+ * for a whole page, which is unreliable across browsers and impossible to
+ * pause or highlight mid-page.
  */
 export function useSpeech() {
   const providerRef = useRef<BrowserTTSProvider | undefined>(undefined)
@@ -33,6 +33,24 @@ export function useSpeech() {
     sessionRef.current += 1
     providerRef.current?.stop()
     useSpeechStore.getState().setPlayback('stopped')
+  }, [])
+
+  /**
+   * Pauses the in-flight utterance in place (PRD §16). Unlike `stop()`, this
+   * does not touch the session token: the engine holds the same utterance
+   * paused and `resume()` continues it, rather than the queue restarting a
+   * chunk from its beginning.
+   */
+  const pause = useCallback(() => {
+    if (useSpeechStore.getState().playback !== 'playing') return
+    providerRef.current?.pause()
+    useSpeechStore.getState().setPlayback('paused')
+  }, [])
+
+  const resume = useCallback(() => {
+    if (useSpeechStore.getState().playback !== 'paused') return
+    providerRef.current?.resume()
+    useSpeechStore.getState().setPlayback('playing')
   }, [])
 
   const play = useCallback(() => {
@@ -80,5 +98,5 @@ export function useSpeech() {
     speakFrom(0)
   }, [])
 
-  return { play, stop }
+  return { play, pause, resume, stop }
 }
