@@ -2,15 +2,17 @@ import { useEffect } from 'react'
 import { AppLayout } from '../components/Layout/AppLayout'
 import { ErrorNotice } from '../components/Layout/ErrorNotice'
 import { PdfViewer } from '../components/PdfViewer/PdfViewer'
+import { AutoAdvanceToggle } from '../components/Player/AutoAdvanceToggle'
 import { PlayerControls } from '../components/Player/PlayerControls'
 import { ReaderText } from '../components/ReaderText/ReaderText'
 import { HomeScreen } from '../components/Upload/HomeScreen'
-import { hasNextPage, hasPreviousPage } from '../utils/page'
 import { usePdf } from '../hooks/usePdf'
 import { useSpeech } from '../hooks/useSpeech'
 import { useBookStore } from '../store/bookStore'
+import { usePreferencesStore } from '../store/preferencesStore'
 import { useReaderStore } from '../store/readerStore'
 import { useSpeechStore } from '../store/speechStore'
+import { hasNextPage, hasPreviousPage } from '../utils/page'
 
 /**
  * Composes the application (PRD Rule 4). Contains no PDF, speech, OCR or
@@ -18,7 +20,28 @@ import { useSpeechStore } from '../store/speechStore'
  */
 export function App() {
   const { openFile, renderPage, extractPage, closeBook } = usePdf()
-  const { play, pause, resume, stop } = useSpeech()
+
+  /**
+   * Auto-advance (PRD §17): when a page finishes speaking naturally, move to
+   * the next one, extract its text, and keep reading — stopping quietly once
+   * there is no next page. This is the one place PDF navigation and speech
+   * genuinely depend on each other, so it lives here rather than inside
+   * either hook: `useSpeech` only reports that a page finished; App decides
+   * what that means.
+   */
+  async function handlePageComplete() {
+    if (!usePreferencesStore.getState().preferences.autoAdvance) return
+
+    const { currentPage: page, totalPages: total } = useReaderStore.getState()
+    if (!hasNextPage(page, total)) return
+
+    const nextPage = page + 1
+    useReaderStore.getState().goToPage(nextPage)
+    await extractPage(nextPage)
+    play()
+  }
+
+  const { play, pause, resume, stop } = useSpeech(handlePageComplete)
 
   const book = useBookStore((state) => state.current)
   const bookId = book?.bookId
@@ -28,14 +51,17 @@ export function App() {
   const pageText = useReaderStore((state) => state.pageText)
   const error = useReaderStore((state) => state.error)
   const playback = useSpeechStore((state) => state.playback)
+  const autoAdvance = usePreferencesStore((state) => state.preferences.autoAdvance)
 
   const isLoading = status === 'loading-document'
   const canPlay = Boolean(pageText && pageText.text.trim() !== '' && !pageText.isLikelyScanned)
 
   // Single trigger point for extraction (PRD §10/§11): fires on open and on
-  // every manual or future auto-advance page change, keyed on the book's
-  // identity so opening a different book re-extracts even if both happen to
-  // land on page 1.
+  // every manual page change, keyed on the book's identity so opening a
+  // different book re-extracts even if both happen to land on page 1.
+  // Auto-advance extracts the next page itself before calling play() again,
+  // so this effect re-running for that same page change is a harmless no-op
+  // once pageText is already set.
   useEffect(() => {
     if (bookId && status === 'ready') void extractPage(currentPage)
   }, [bookId, currentPage, status, extractPage])
@@ -103,6 +129,10 @@ export function App() {
               onStop={stop}
               onPrevious={() => handleNavigate(currentPage - 1)}
               onNext={() => handleNavigate(currentPage + 1)}
+            />
+            <AutoAdvanceToggle
+              checked={autoAdvance}
+              onChange={(checked) => usePreferencesStore.getState().update({ autoAdvance: checked })}
             />
             <ReaderText pageText={pageText} />
           </>

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { BrowserTTSProvider } from '../services/speech/BrowserTTSProvider'
 import type { SpeechOptions } from '../services/speech/types'
 import { chunkText } from '../services/speech/textChunker'
@@ -14,10 +14,21 @@ import { toAppError } from '../utils/errors'
  * a time, each chunk's `onEnd` triggering the next — never one long utterance
  * for a whole page, which is unreliable across browsers and impossible to
  * pause or highlight mid-page.
+ *
+ * @param onPageComplete Called when every chunk on the page has finished
+ * speaking naturally — never on `stop()`, `pause()`, or a synthesis error.
+ * This is the seam auto-advance (PRD §17) hangs off: this hook only reports
+ * that a page finished, and the caller (which also knows about page
+ * navigation) decides whether to move on.
  */
-export function useSpeech() {
+export function useSpeech(onPageComplete?: () => void) {
   const providerRef = useRef<BrowserTTSProvider | undefined>(undefined)
   providerRef.current ??= new BrowserTTSProvider()
+
+  const onPageCompleteRef = useRef(onPageComplete)
+  useEffect(() => {
+    onPageCompleteRef.current = onPageComplete
+  }, [onPageComplete])
 
   /**
    * Identifies one playback run. `stop()` and a fresh `play()` both bump this,
@@ -79,6 +90,7 @@ export function useSpeech() {
 
       if (index >= chunks.length) {
         useSpeechStore.getState().setPlayback('stopped')
+        onPageCompleteRef.current?.()
         return
       }
 
