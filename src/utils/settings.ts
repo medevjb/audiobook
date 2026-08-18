@@ -1,4 +1,4 @@
-import type { ReadingSettings, UserPreferences } from '../types/preferences'
+import { PLAYBACK_RATES, type ReadingSettings, type UserPreferences } from '../types/preferences'
 import type { BookProgress } from '../types/reader'
 
 /**
@@ -17,4 +17,16 @@ export function resolveReadingSettings(
     rate: progress?.rate ?? preferences.rate,
     autoAdvance: progress?.autoAdvance ?? preferences.autoAdvance,
   }
+}
+
+/**
+ * Moves to the next/previous PRD §19 rate, for the "+"/"-" keyboard
+ * shortcuts (PRD §34). Clamps at the ends rather than wrapping — repeatedly
+ * pressing "+" at 2.0x should do nothing, not jump back to 0.5x.
+ */
+export function stepPlaybackRate(rate: number, direction: 1 | -1): number {
+  const index = PLAYBACK_RATES.indexOf(rate as (typeof PLAYBACK_RATES)[number])
+  const current = index === -1 ? PLAYBACK_RATES.indexOf(1) : index
+  const next = Math.min(PLAYBACK_RATES.length - 1, Math.max(0, current + direction))
+  return PLAYBACK_RATES[next]
 }

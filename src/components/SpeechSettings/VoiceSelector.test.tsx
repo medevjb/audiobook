@@ -33,6 +33,16 @@ describe('VoiceSelector (PRD §20/§22)', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 
+  it('shows a distinct message when the device has no voices at all (PRD §35)', () => {
+    render(<VoiceSelector language="en" voiceURI={undefined} voices={[]} voicesLoaded onChange={vi.fn()} />)
+
+    expect(
+      screen.getByText('No voices are available on this device. Text-to-speech cannot play here.'),
+    ).toBeInTheDocument()
+    // Nothing to "show all" of — that action must not appear here.
+    expect(screen.queryByRole('button', { name: 'Show all available voices' })).not.toBeInTheDocument()
+  })
+
   it('reveals every voice after "Show all available voices"', async () => {
     const user = userEvent.setup()
     const voices = [voice({ voiceURI: 'david', name: 'Microsoft David', lang: 'en-US' })]

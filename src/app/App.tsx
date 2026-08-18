@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { AppLayout } from '../components/Layout/AppLayout'
 import { ErrorNotice } from '../components/Layout/ErrorNotice'
+import { ReaderLayout } from '../components/Layout/ReaderLayout'
 import { PdfViewer } from '../components/PdfViewer/PdfViewer'
 import { AutoAdvanceToggle } from '../components/Player/AutoAdvanceToggle'
 import { PlayerControls } from '../components/Player/PlayerControls'
@@ -9,6 +10,7 @@ import { SpeechSettingsPanel } from '../components/SpeechSettings/SpeechSettings
 import { HomeScreen } from '../components/Upload/HomeScreen'
 import type { LibraryEntry } from '../hooks/useLibrary'
 import { useLibrary } from '../hooks/useLibrary'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useOcr } from '../hooks/useOcr'
 import { usePdf } from '../hooks/usePdf'
 import { useReadingProgress } from '../hooks/useReadingProgress'
@@ -20,6 +22,7 @@ import { useReaderStore } from '../store/readerStore'
 import { useSpeechStore } from '../store/speechStore'
 import { findVoiceByURI } from '../utils/language'
 import { hasNextPage, hasPreviousPage } from '../utils/page'
+import { stepPlaybackRate } from '../utils/settings'
 
 /**
  * Composes the application (PRD Rule 4). Contains no PDF, speech, OCR or
@@ -141,6 +144,24 @@ export function App() {
     void library.refresh()
   }
 
+  useKeyboardShortcuts({
+    enabled: Boolean(book) && status !== 'loading-document',
+    onPlayPause: () => {
+      if (playback === 'playing') pause()
+      else if (playback === 'paused') resume()
+      else if (canPlay) play()
+    },
+    onStop: stop,
+    onNext: () => {
+      if (hasNextPage(currentPage, totalPages)) handleNavigate(currentPage + 1)
+    },
+    onPrevious: () => {
+      if (hasPreviousPage(currentPage)) handleNavigate(currentPage - 1)
+    },
+    onIncreaseSpeed: () => usePreferencesStore.getState().update({ rate: stepPlaybackRate(rate, 1) }),
+    onDecreaseSpeed: () => usePreferencesStore.getState().update({ rate: stepPlaybackRate(rate, -1) }),
+  })
+
   return (
     <AppLayout
       status={statusMessage()}
@@ -163,48 +184,54 @@ export function App() {
         )}
 
         {book && status !== 'loading-document' ? (
-          <>
-            <PdfViewer
-              currentPage={currentPage}
-              totalPages={totalPages}
-              render={renderPage}
-              onNavigate={handleNavigate}
-            />
-            <SpeechSettingsPanel
-              language={language}
-              voiceURI={voiceURI}
-              rate={rate}
-              voices={voices}
-              voicesLoaded={voicesLoaded}
-              onLanguageChange={(nextLanguage, nextVoiceURI) =>
-                usePreferencesStore.getState().update({ language: nextLanguage, voiceURI: nextVoiceURI })
-              }
-              onVoiceChange={(nextVoiceURI) => usePreferencesStore.getState().update({ voiceURI: nextVoiceURI })}
-              onRateChange={(nextRate) => usePreferencesStore.getState().update({ rate: nextRate })}
-            />
-            <PlayerControls
-              playback={playback}
-              canPlay={canPlay}
-              hasPrevious={hasPreviousPage(currentPage)}
-              hasNext={hasNextPage(currentPage, totalPages)}
-              onPlay={play}
-              onPause={pause}
-              onResume={resume}
-              onStop={stop}
-              onPrevious={() => handleNavigate(currentPage - 1)}
-              onNext={() => handleNavigate(currentPage + 1)}
-            />
-            <AutoAdvanceToggle
-              checked={autoAdvance}
-              onChange={(checked) => usePreferencesStore.getState().update({ autoAdvance: checked })}
-            />
-            <ReaderText
-              pageText={pageText}
-              ocrState={ocr.state}
-              onRecognize={() => void handleRecognize()}
-              onAnswerConsent={ocr.answerConsent}
-            />
-          </>
+          <ReaderLayout
+            viewer={
+              <PdfViewer
+                currentPage={currentPage}
+                totalPages={totalPages}
+                render={renderPage}
+                onNavigate={handleNavigate}
+              />
+            }
+            sidebar={
+              <>
+                <SpeechSettingsPanel
+                  language={language}
+                  voiceURI={voiceURI}
+                  rate={rate}
+                  voices={voices}
+                  voicesLoaded={voicesLoaded}
+                  onLanguageChange={(nextLanguage, nextVoiceURI) =>
+                    usePreferencesStore.getState().update({ language: nextLanguage, voiceURI: nextVoiceURI })
+                  }
+                  onVoiceChange={(nextVoiceURI) => usePreferencesStore.getState().update({ voiceURI: nextVoiceURI })}
+                  onRateChange={(nextRate) => usePreferencesStore.getState().update({ rate: nextRate })}
+                />
+                <PlayerControls
+                  playback={playback}
+                  canPlay={canPlay}
+                  hasPrevious={hasPreviousPage(currentPage)}
+                  hasNext={hasNextPage(currentPage, totalPages)}
+                  onPlay={play}
+                  onPause={pause}
+                  onResume={resume}
+                  onStop={stop}
+                  onPrevious={() => handleNavigate(currentPage - 1)}
+                  onNext={() => handleNavigate(currentPage + 1)}
+                />
+                <AutoAdvanceToggle
+                  checked={autoAdvance}
+                  onChange={(checked) => usePreferencesStore.getState().update({ autoAdvance: checked })}
+                />
+                <ReaderText
+                  pageText={pageText}
+                  ocrState={ocr.state}
+                  onRecognize={() => void handleRecognize()}
+                  onAnswerConsent={ocr.answerConsent}
+                />
+              </>
+            }
+          />
         ) : (
           <HomeScreen
             onFileSelected={handleFileSelected}
