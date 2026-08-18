@@ -5,13 +5,16 @@ import { PdfViewer } from '../components/PdfViewer/PdfViewer'
 import { AutoAdvanceToggle } from '../components/Player/AutoAdvanceToggle'
 import { PlayerControls } from '../components/Player/PlayerControls'
 import { ReaderText } from '../components/ReaderText/ReaderText'
+import { SpeechSettingsPanel } from '../components/SpeechSettings/SpeechSettingsPanel'
 import { HomeScreen } from '../components/Upload/HomeScreen'
 import { usePdf } from '../hooks/usePdf'
 import { useSpeech } from '../hooks/useSpeech'
+import { useVoices } from '../hooks/useVoices'
 import { useBookStore } from '../store/bookStore'
 import { usePreferencesStore } from '../store/preferencesStore'
 import { useReaderStore } from '../store/readerStore'
 import { useSpeechStore } from '../store/speechStore'
+import { findVoiceByURI } from '../utils/language'
 import { hasNextPage, hasPreviousPage } from '../utils/page'
 
 /**
@@ -20,6 +23,7 @@ import { hasNextPage, hasPreviousPage } from '../utils/page'
  */
 export function App() {
   const { openFile, renderPage, extractPage, closeBook } = usePdf()
+  useVoices()
 
   /**
    * Auto-advance (PRD §17): when a page finishes speaking naturally, move to
@@ -51,10 +55,19 @@ export function App() {
   const pageText = useReaderStore((state) => state.pageText)
   const error = useReaderStore((state) => state.error)
   const playback = useSpeechStore((state) => state.playback)
+  const voices = useSpeechStore((state) => state.voices)
+  const voicesLoaded = useSpeechStore((state) => state.voicesLoaded)
   const autoAdvance = usePreferencesStore((state) => state.preferences.autoAdvance)
+  const language = usePreferencesStore((state) => state.preferences.language)
+  const voiceURI = usePreferencesStore((state) => state.preferences.voiceURI)
 
   const isLoading = status === 'loading-document'
-  const canPlay = Boolean(pageText && pageText.text.trim() !== '' && !pageText.isLikelyScanned)
+  const hasReadableText = Boolean(pageText && pageText.text.trim() !== '' && !pageText.isLikelyScanned)
+  // PRD §22: never let Play speak with no real voice resolved — silently
+  // falling back to the browser's own default could mean an English voice
+  // reading a Bengali page.
+  const hasResolvedVoice = Boolean(voiceURI && findVoiceByURI(voices, voiceURI))
+  const canPlay = hasReadableText && hasResolvedVoice
 
   // Single trigger point for extraction (PRD §10/§11): fires on open and on
   // every manual page change, keyed on the book's identity so opening a
@@ -117,6 +130,16 @@ export function App() {
               totalPages={totalPages}
               render={renderPage}
               onNavigate={handleNavigate}
+            />
+            <SpeechSettingsPanel
+              language={language}
+              voiceURI={voiceURI}
+              voices={voices}
+              voicesLoaded={voicesLoaded}
+              onLanguageChange={(nextLanguage, nextVoiceURI) =>
+                usePreferencesStore.getState().update({ language: nextLanguage, voiceURI: nextVoiceURI })
+              }
+              onVoiceChange={(nextVoiceURI) => usePreferencesStore.getState().update({ voiceURI: nextVoiceURI })}
             />
             <PlayerControls
               playback={playback}
