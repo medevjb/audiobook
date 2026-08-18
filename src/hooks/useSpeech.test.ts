@@ -28,6 +28,8 @@ class FakeUtterance {
 
 let speakSpy: ReturnType<typeof vi.fn>
 let cancelSpy: ReturnType<typeof vi.fn>
+let pauseSpy: ReturnType<typeof vi.fn>
+let resumeSpy: ReturnType<typeof vi.fn>
 
 function setPageText(overrides: Partial<PageText>) {
   useReaderStore.setState({
@@ -38,14 +40,16 @@ function setPageText(overrides: Partial<PageText>) {
 beforeEach(() => {
   speakSpy = vi.fn()
   cancelSpy = vi.fn()
+  pauseSpy = vi.fn()
+  resumeSpy = vi.fn()
 
   vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance)
   vi.stubGlobal('speechSynthesis', {
     getVoices: () => [],
     speak: speakSpy,
     cancel: cancelSpy,
-    pause: vi.fn(),
-    resume: vi.fn(),
+    pause: pauseSpy,
+    resume: resumeSpy,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   })
@@ -171,5 +175,65 @@ describe('useSpeech chunk sequencing (PRD §15)', () => {
     const { result } = renderHook(() => useSpeech())
     act(() => result.current.play())
     expect(speakSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('useSpeech pause and resume (PRD §16)', () => {
+  it('pauses the engine in place without touching the chunk queue', () => {
+    const longText = 'Sentence number one is here. '.repeat(20)
+    setPageText({ text: longText })
+    const { result } = renderHook(() => useSpeech())
+
+    act(() => result.current.play())
+    act(() => result.current.pause())
+
+    expect(pauseSpy).toHaveBeenCalledOnce()
+    expect(useSpeechStore.getState().playback).toBe('paused')
+    // Pausing must not cancel the utterance — that would drop the queue.
+    expect(cancelSpy).not.toHaveBeenCalled()
+  })
+
+  it('resumes the same utterance rather than restarting the chunk', () => {
+    setPageText({ text: 'One short sentence.' })
+    const { result } = renderHook(() => useSpeech())
+
+    act(() => result.current.play())
+    act(() => result.current.pause())
+    act(() => result.current.resume())
+
+    expect(resumeSpy).toHaveBeenCalledOnce()
+    expect(useSpeechStore.getState().playback).toBe('playing')
+    // Still the one utterance from play() — resume did not speak again.
+    expect(speakSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('does nothing when pausing while stopped', () => {
+    const { result } = renderHook(() => useSpeech())
+    act(() => result.current.pause())
+    expect(pauseSpy).not.toHaveBeenCalled()
+    expect(useSpeechStore.getState().playback).toBe('stopped')
+  })
+
+  it('does nothing when resuming while not paused', () => {
+    setPageText({ text: 'One short sentence.' })
+    const { result } = renderHook(() => useSpeech())
+    act(() => result.current.play())
+
+    act(() => result.current.resume())
+    expect(resumeSpy).not.toHaveBeenCalled()
+    expect(useSpeechStore.getState().playback).toBe('playing')
+  })
+
+  it('the paused chunk still advances the queue normally once resumed', () => {
+    const longText = 'Sentence number one is here. '.repeat(20)
+    setPageText({ text: longText })
+    const { result } = renderHook(() => useSpeech())
+
+    act(() => result.current.play())
+    act(() => result.current.pause())
+    act(() => result.current.resume())
+    act(() => latestUtterance().onend?.())
+
+    expect(speakSpy).toHaveBeenCalledTimes(2)
   })
 })
