@@ -33,6 +33,16 @@ export function VoiceSelector({ language, voiceURI, voices, voicesLoaded, onChan
     return <p className="text-sm text-ink-soft">Loading voices…</p>
   }
 
+  // Distinct from "no match for this language": nothing to fall back to at
+  // all, so there is no "show all" to offer (PRD §35 "no voices available").
+  if (voices.length === 0) {
+    return (
+      <p className="text-sm text-rose">
+        No voices are available on this device. Text-to-speech cannot play here.
+      </p>
+    )
+  }
+
   const matching = filterVoicesByLanguage(voices, language)
   const hasMatch = matching.length > 0
 
