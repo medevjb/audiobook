@@ -74,13 +74,6 @@ export function useSpeech(onPageComplete?: () => void) {
     const chunks = chunkText(pageText.text)
     if (chunks.length === 0) return
 
-    const { preferences } = usePreferencesStore.getState()
-    const options: SpeechOptions = {
-      lang: preferences.language,
-      voiceURI: preferences.voiceURI,
-      rate: preferences.rate,
-    }
-
     const session = ++sessionRef.current
     useSpeechStore.getState().setChunks(chunks)
     useSpeechStore.getState().setPlayback('playing')
@@ -92,6 +85,17 @@ export function useSpeech(onPageComplete?: () => void) {
         useSpeechStore.getState().setPlayback('stopped')
         onPageCompleteRef.current?.()
         return
+      }
+
+      // Read fresh on every chunk, not once for the whole page: a speed (or
+      // voice/language) change while a long page is already reading must
+      // apply to the next chunk, not wait for the page to finish (PRD §19,
+      // "speed changes apply to subsequent utterances").
+      const { preferences } = usePreferencesStore.getState()
+      const options: SpeechOptions = {
+        lang: preferences.language,
+        voiceURI: preferences.voiceURI,
+        rate: preferences.rate,
       }
 
       useSpeechStore.getState().setCurrentChunkIndex(index)

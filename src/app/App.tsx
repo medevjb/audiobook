@@ -60,6 +60,7 @@ export function App() {
   const autoAdvance = usePreferencesStore((state) => state.preferences.autoAdvance)
   const language = usePreferencesStore((state) => state.preferences.language)
   const voiceURI = usePreferencesStore((state) => state.preferences.voiceURI)
+  const rate = usePreferencesStore((state) => state.preferences.rate)
 
   const isLoading = status === 'loading-document'
   const hasReadableText = Boolean(pageText && pageText.text.trim() !== '' && !pageText.isLikelyScanned)
@@ -134,12 +135,14 @@ export function App() {
             <SpeechSettingsPanel
               language={language}
               voiceURI={voiceURI}
+              rate={rate}
               voices={voices}
               voicesLoaded={voicesLoaded}
               onLanguageChange={(nextLanguage, nextVoiceURI) =>
                 usePreferencesStore.getState().update({ language: nextLanguage, voiceURI: nextVoiceURI })
               }
               onVoiceChange={(nextVoiceURI) => usePreferencesStore.getState().update({ voiceURI: nextVoiceURI })}
+              onRateChange={(nextRate) => usePreferencesStore.getState().update({ rate: nextRate })}
             />
             <PlayerControls
               playback={playback}
