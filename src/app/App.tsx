@@ -7,7 +7,10 @@ import { PlayerControls } from '../components/Player/PlayerControls'
 import { ReaderText } from '../components/ReaderText/ReaderText'
 import { SpeechSettingsPanel } from '../components/SpeechSettings/SpeechSettingsPanel'
 import { HomeScreen } from '../components/Upload/HomeScreen'
+import type { LibraryEntry } from '../hooks/useLibrary'
+import { useLibrary } from '../hooks/useLibrary'
 import { usePdf } from '../hooks/usePdf'
+import { useReadingProgress } from '../hooks/useReadingProgress'
 import { useSpeech } from '../hooks/useSpeech'
 import { useVoices } from '../hooks/useVoices'
 import { useBookStore } from '../store/bookStore'
@@ -22,7 +25,9 @@ import { hasNextPage, hasPreviousPage } from '../utils/page'
  * persistence logic — those live in services, driven by hooks.
  */
 export function App() {
-  const { openFile, renderPage, extractPage, closeBook } = usePdf()
+  const { openFile, openStoredBook, renderPage, extractPage, closeBook } = usePdf()
+  const progress = useReadingProgress()
+  const library = useLibrary()
   useVoices()
 
   /**
@@ -80,6 +85,14 @@ export function App() {
     if (bookId && status === 'ready') void extractPage(currentPage)
   }, [bookId, currentPage, status, extractPage])
 
+  // Persist reading progress (PRD §25): position and the per-book settings
+  // override, kept in sync on every page change *and* every settings change
+  // rather than scattered save() calls in each handler — one place that
+  // cannot be forgotten when a future navigation path is added.
+  useEffect(() => {
+    if (bookId && status === 'ready') void progress.save()
+  }, [bookId, currentPage, status, language, voiceURI, rate, autoAdvance, progress])
+
   function statusMessage(): string {
     if (isLoading) return 'Loading PDF…'
     if (error) return error.message
@@ -98,9 +111,15 @@ export function App() {
     void openFile(file)
   }
 
+  function handleOpenRecent(entry: LibraryEntry, startPage?: number) {
+    stop()
+    void openStoredBook(entry.summary, startPage)
+  }
+
   function handleCloseBook() {
     stop()
     void closeBook()
+    void library.refresh()
   }
 
   return (
@@ -163,7 +182,12 @@ export function App() {
             <ReaderText pageText={pageText} />
           </>
         ) : (
-          <HomeScreen onFileSelected={handleFileSelected} busy={isLoading} />
+          <HomeScreen
+            onFileSelected={handleFileSelected}
+            recentBooks={library.entries}
+            onOpenRecent={handleOpenRecent}
+            busy={isLoading}
+          />
         )}
       </div>
     </AppLayout>

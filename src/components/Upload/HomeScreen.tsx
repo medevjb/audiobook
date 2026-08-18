@@ -1,7 +1,11 @@
+import type { LibraryEntry } from '../../hooks/useLibrary'
 import { DropZone } from './DropZone'
+import { RecentBooks } from './RecentBooks'
 
 interface HomeScreenProps {
   onFileSelected(file: File): void
+  recentBooks: readonly LibraryEntry[]
+  onOpenRecent(entry: LibraryEntry, startPage?: number): void
   busy?: boolean
 }
 
@@ -10,7 +14,7 @@ interface HomeScreenProps {
  * surface — the same warm paper the PDF itself will render on once a book is
  * open, introduced here as "place a book under the lamp."
  */
-export function HomeScreen({ onFileSelected, busy }: HomeScreenProps) {
+export function HomeScreen({ onFileSelected, recentBooks, onOpenRecent, busy }: HomeScreenProps) {
   return (
     <div className="relative mx-auto max-w-xl py-6">
       <div
@@ -30,8 +34,12 @@ export function HomeScreen({ onFileSelected, busy }: HomeScreenProps) {
         </p>
       </div>
 
-      <div className="mt-8 rounded-xl bg-page p-2 shadow-[0_0_60px_-15px_var(--color-brass)]">
-        <DropZone onFileSelected={onFileSelected} disabled={busy} />
+      <div className="mt-8">
+        <RecentBooks entries={recentBooks} onOpen={onOpenRecent} />
+
+        <div className="rounded-xl bg-page p-2 shadow-[0_0_60px_-15px_var(--color-brass)]">
+          <DropZone onFileSelected={onFileSelected} disabled={busy} />
+        </div>
       </div>
 
       <p className="mt-6 text-center text-sm text-ink-soft">
