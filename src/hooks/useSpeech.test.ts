@@ -1,7 +1,9 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { usePreferencesStore } from '../store/preferencesStore'
 import { useReaderStore } from '../store/readerStore'
 import { useSpeechStore } from '../store/speechStore'
+import { DEFAULT_PREFERENCES } from '../types/preferences'
 import type { PageText } from '../types/reader'
 import { useSpeech } from './useSpeech'
 
@@ -56,6 +58,7 @@ beforeEach(() => {
 
   useReaderStore.getState().reset()
   useSpeechStore.getState().reset()
+  usePreferencesStore.setState({ preferences: { ...DEFAULT_PREFERENCES } })
 })
 
 afterEach(() => {
@@ -298,5 +301,37 @@ describe('useSpeech onPageComplete (PRD §17 seam)', () => {
 
     expect(first).not.toHaveBeenCalled()
     expect(second).toHaveBeenCalledOnce()
+  })
+})
+
+describe('useSpeech reads playback options fresh per chunk (PRD §19)', () => {
+  it('applies a speed change to the very next chunk, not just the next play()', () => {
+    const longText = 'Sentence number one is here. '.repeat(20)
+    setPageText({ text: longText })
+    const { result } = renderHook(() => useSpeech())
+
+    act(() => result.current.play())
+    expect(latestUtterance().rate).toBe(1.0)
+
+    // Changed mid-page, before the current chunk has even finished.
+    usePreferencesStore.getState().update({ rate: 1.75 })
+
+    act(() => latestUtterance().onend?.())
+    expect(speakSpy).toHaveBeenCalledTimes(2)
+    expect(latestUtterance().rate).toBe(1.75)
+  })
+
+  it('applies a language and voice change to the next chunk the same way', () => {
+    const longText = 'Sentence number one is here. '.repeat(20)
+    setPageText({ text: longText })
+    const { result } = renderHook(() => useSpeech())
+
+    act(() => result.current.play())
+    expect(latestUtterance().lang).toBe('en')
+
+    usePreferencesStore.getState().update({ language: 'fr' })
+    act(() => latestUtterance().onend?.())
+
+    expect(latestUtterance().lang).toBe('fr')
   })
 })
