@@ -237,3 +237,66 @@ describe('useSpeech pause and resume (PRD §16)', () => {
     expect(speakSpy).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('useSpeech onPageComplete (PRD §17 seam)', () => {
+  it('fires once every chunk on the page has finished naturally', () => {
+    setPageText({ text: 'First. Second.' })
+    const onPageComplete = vi.fn()
+    const { result } = renderHook(() => useSpeech(onPageComplete))
+
+    act(() => result.current.play())
+    expect(onPageComplete).not.toHaveBeenCalled()
+
+    act(() => latestUtterance().onend?.())
+    expect(onPageComplete).toHaveBeenCalledOnce()
+  })
+
+  it('does not fire partway through a multi-chunk page', () => {
+    const longText = 'Sentence number one is here. '.repeat(20)
+    setPageText({ text: longText })
+    const onPageComplete = vi.fn()
+    const { result } = renderHook(() => useSpeech(onPageComplete))
+
+    act(() => result.current.play())
+    act(() => latestUtterance().onend?.()) // finishes chunk 1 of several
+
+    expect(useSpeechStore.getState().playback).toBe('playing')
+    expect(onPageComplete).not.toHaveBeenCalled()
+  })
+
+  it('does not fire when stop() cuts playback short', () => {
+    setPageText({ text: 'One short sentence.' })
+    const onPageComplete = vi.fn()
+    const { result } = renderHook(() => useSpeech(onPageComplete))
+
+    act(() => result.current.play())
+    act(() => result.current.stop())
+
+    expect(onPageComplete).not.toHaveBeenCalled()
+  })
+
+  it('does not fire when a chunk errors', () => {
+    setPageText({ text: 'One short sentence.' })
+    const onPageComplete = vi.fn()
+    const { result } = renderHook(() => useSpeech(onPageComplete))
+
+    act(() => result.current.play())
+    act(() => latestUtterance().onerror?.({ error: 'synthesis-failed' }))
+
+    expect(onPageComplete).not.toHaveBeenCalled()
+  })
+
+  it('always calls the latest callback, even across re-renders', () => {
+    setPageText({ text: 'One short sentence.' })
+    const first = vi.fn()
+    const second = vi.fn()
+    const { result, rerender } = renderHook(({ cb }) => useSpeech(cb), { initialProps: { cb: first } })
+
+    rerender({ cb: second })
+    act(() => result.current.play())
+    act(() => latestUtterance().onend?.())
+
+    expect(first).not.toHaveBeenCalled()
+    expect(second).toHaveBeenCalledOnce()
+  })
+})
