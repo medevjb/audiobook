@@ -1,0 +1,70 @@
+@import 'tailwindcss';
+
+/*
+ * Self-hosted, not CDN-loaded: the product's own privacy principle (PRD §3.2/
+ * §3.3, "no external transmission") applies to the app's assets too, not just
+ * book content. Only the weights actually used ship, latin subset only —
+ * extracted book text in other scripts falls back to the OS font stack (see
+ * the font-family tokens below).
+ */
+@import '@fontsource/fraunces/400.css';
+@import '@fontsource/fraunces/400-italic.css';
+@import '@fontsource/fraunces/500.css';
+@import '@fontsource/fraunces/600.css';
+@import '@fontsource/work-sans/400.css';
+@import '@fontsource/work-sans/500.css';
+@import '@fontsource/work-sans/600.css';
+@import '@fontsource/work-sans/700.css';
+
+/*
+ * Design concept: "The Reading Room" (docs/ARCHITECTURE.md §8).
+ *
+ * Everything that IS content — the PDF page, the extracted-text panel — sits
+ * on a lit paper surface. Everything that IS control — header, nav, status —
+ * lives in a dim, warm room around it. One consistent light/dark relationship
+ * carries the whole app's identity instead of a decorative accent color.
+ */
+@theme {
+  --color-room: #211e1b;
+  --color-room-2: #2b2723;
+  --color-room-3: #363029;
+  --color-page: #fbf7ee;
+  --color-page-dim: #f1ead9;
+  --color-ink: #e8e2d6;
+  --color-ink-strong: #fffcf5;
+  --color-ink-soft: #a89e8c;
+  --color-ink-on-page: #23201b;
+  --color-ink-on-page-soft: #6b6152;
+  --color-brass: #d9a441;
+  --color-brass-strong: #eab657;
+  --color-rose: #d17a72;
+  --color-rose-soft: #4a2f2c;
+
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  /*
+   * UI chrome only. Book text and any label rendered in a non-Latin script
+   * (native voice/language names, extracted PDF text) must not force this
+   * face — it has no Bengali, Devanagari, CJK or Arabic glyphs, and a
+   * self-hosted font covering all PRD §21 languages would be tens of MB.
+   * Use `font-content` for anything that renders book or script content.
+   */
+  --font-sans: 'Work Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-content:
+    ui-sans-serif, system-ui, 'Noto Sans', 'Segoe UI', sans-serif;
+}
+
+body {
+  background-color: var(--color-room);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
