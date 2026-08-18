@@ -9,6 +9,7 @@ import { SpeechSettingsPanel } from '../components/SpeechSettings/SpeechSettings
 import { HomeScreen } from '../components/Upload/HomeScreen'
 import type { LibraryEntry } from '../hooks/useLibrary'
 import { useLibrary } from '../hooks/useLibrary'
+import { useOcr } from '../hooks/useOcr'
 import { usePdf } from '../hooks/usePdf'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { useSpeech } from '../hooks/useSpeech'
@@ -25,9 +26,10 @@ import { hasNextPage, hasPreviousPage } from '../utils/page'
  * persistence logic — those live in services, driven by hooks.
  */
 export function App() {
-  const { openFile, openStoredBook, renderPage, extractPage, closeBook } = usePdf()
+  const { openFile, openStoredBook, renderPage, renderPageForOcr, extractPage, closeBook } = usePdf()
   const progress = useReadingProgress()
   const library = useLibrary()
+  const ocr = useOcr()
   useVoices()
 
   /**
@@ -45,6 +47,7 @@ export function App() {
     if (!hasNextPage(page, total)) return
 
     const nextPage = page + 1
+    ocr.reset()
     useReaderStore.getState().goToPage(nextPage)
     await extractPage(nextPage)
     play()
@@ -103,7 +106,23 @@ export function App() {
   function handleNavigate(page: number) {
     // PRD §10/§16: changing pages manually always stops whatever is speaking.
     stop()
+    ocr.reset()
     useReaderStore.getState().goToPage(page)
+  }
+
+  /**
+   * OCR (PRD §13): render the current page into a detached canvas and hand it
+   * to Tesseract. `useOcr` owns the consent prompt and progress; this just
+   * supplies the image and writes the result back as the page's text once
+   * recognition finishes, in the same place `extractPage` writes PDF text.
+   */
+  async function handleRecognize() {
+    const { currentPage: page } = useReaderStore.getState()
+    const canvas = await renderPageForOcr(page)
+    if (!canvas) return
+
+    const result = await ocr.recognize(page, canvas, language).catch(() => undefined)
+    if (result) useReaderStore.getState().setPageText(result)
   }
 
   function handleFileSelected(file: File) {
@@ -179,7 +198,12 @@ export function App() {
               checked={autoAdvance}
               onChange={(checked) => usePreferencesStore.getState().update({ autoAdvance: checked })}
             />
-            <ReaderText pageText={pageText} />
+            <ReaderText
+              pageText={pageText}
+              ocrState={ocr.state}
+              onRecognize={() => void handleRecognize()}
+              onAnswerConsent={ocr.answerConsent}
+            />
           </>
         ) : (
           <HomeScreen

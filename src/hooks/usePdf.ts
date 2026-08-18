@@ -155,11 +155,26 @@ export function usePdf() {
     }
   }, [])
 
+  /**
+   * Renders a page into a detached canvas for OCR (PRD §13 step 1) — never
+   * the visible one, so recognizing text on a page doesn't fight the user's
+   * own view of it. A higher scale than on-screen display needs: OCR
+   * accuracy benefits from resolution that would be wasted pixels on a
+   * canvas the user actually looks at.
+   */
+  const renderPageForOcr = useCallback(async (pageNumber: number): Promise<HTMLCanvasElement | undefined> => {
+    const handle = documentRef.current
+    if (!handle) return undefined
+    const canvas = document.createElement('canvas')
+    await handle.renderPage(pageNumber, canvas, 3)
+    return canvas
+  }, [])
+
   const closeBook = useCallback(async () => {
     await closeDocument()
     useReaderStore.getState().reset()
     useBookStore.getState().setCurrent(undefined)
   }, [closeDocument])
 
-  return { openFile, openStoredBook, renderPage, extractPage, closeBook, documentRef }
+  return { openFile, openStoredBook, renderPage, renderPageForOcr, extractPage, closeBook, documentRef }
 }

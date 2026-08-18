@@ -58,6 +58,7 @@ export type ReaderErrorCode =
   | 'voice-unavailable'
   | 'speech-failed'
   | 'ocr-failed'
+  | 'ocr-cancelled'
   | 'ocr-language-unsupported'
   | 'storage-quota-exceeded'
   | 'storage-unavailable'
