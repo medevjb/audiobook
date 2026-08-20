@@ -24,39 +24,79 @@
  * lives in a dim, warm room around it. One consistent light/dark relationship
  * carries the whole app's identity instead of a decorative accent color.
  */
-@theme {
-  --color-room: #211e1b;
-  --color-room-2: #2b2723;
-  --color-room-3: #363029;
-  --color-page: #fbf7ee;
-  --color-page-dim: #f1ead9;
-  --color-ink: #e8e2d6;
-  --color-ink-strong: #fffcf5;
-  --color-ink-soft: #a89e8c;
-  --color-ink-on-page: #23201b;
-  --color-ink-on-page-soft: #6b6152;
-  --color-brass: #d9a441;
-  --color-brass-strong: #eab657;
-  --color-rose: #d17a72;
-  --color-rose-soft: #4a2f2c;
+:root {
+  --color-room: #0c0e12;
+  --color-room-2: #14171f;
+  --color-room-3: #1c212c;
+  --color-page: #fbf9f5;
+  --color-page-dim: #f2ece1;
+  --color-ink: #e2e8f0;
+  --color-ink-strong: #ffffff;
+  --color-ink-soft: #94a3b8;
+  --color-ink-on-page: #18181b;
+  --color-ink-on-page-soft: #52525b;
+  --color-brass: #f59e0b;
+  --color-brass-strong: #fbbf24;
+  --color-rose: #f43f5e;
+  --color-rose-soft: #3f171d;
+  --color-emerald: #10b981;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  color-scheme: dark;
+}
 
-  --font-display: 'Fraunces', ui-serif, Georgia, serif;
-  /*
-   * UI chrome only. Book text and any label rendered in a non-Latin script
-   * (native voice/language names, extracted PDF text) must not force this
-   * face — it has no Bengali, Devanagari, CJK or Arabic glyphs, and a
-   * self-hosted font covering all PRD §21 languages would be tens of MB.
-   * Use `font-content` for anything that renders book or script content.
-   */
-  --font-sans: 'Work Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-content:
-    ui-sans-serif, system-ui, 'Noto Sans', 'Segoe UI', sans-serif;
+[data-theme='light'],
+html.light {
+  --color-room: #f5f3ef;
+  --color-room-2: #ffffff;
+  --color-room-3: #eae5dc;
+  --color-page: #ffffff;
+  --color-page-dim: #f5f0e6;
+  --color-ink: #334155;
+  --color-ink-strong: #0f172a;
+  --color-ink-soft: #64748b;
+  --color-ink-on-page: #0f172a;
+  --color-ink-on-page-soft: #64748b;
+  --color-brass: #d97706;
+  --color-brass-strong: #b45309;
+  --color-rose: #e11d48;
+  --color-rose-soft: #ffe4e6;
+  --color-emerald: #059669;
+  --color-border: rgba(0, 0, 0, 0.09);
+  --color-border-subtle: rgba(0, 0, 0, 0.05);
+  color-scheme: light;
+}
+
+@theme {
+  --color-room: var(--color-room);
+  --color-room-2: var(--color-room-2);
+  --color-room-3: var(--color-room-3);
+  --color-page: var(--color-page);
+  --color-page-dim: var(--color-page-dim);
+  --color-ink: var(--color-ink);
+  --color-ink-strong: var(--color-ink-strong);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-ink-on-page: var(--color-ink-on-page);
+  --color-ink-on-page-soft: var(--color-ink-on-page-soft);
+  --color-brass: var(--color-brass);
+  --color-brass-strong: var(--color-brass-strong);
+  --color-rose: var(--color-rose);
+  --color-rose-soft: var(--color-rose-soft);
+  --color-emerald: var(--color-emerald);
+  --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
+
+  --font-display: 'Newsreader', 'Lora', 'Fraunces', ui-serif, Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', 'Work Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-content: 'Lora', 'Newsreader', ui-serif, Georgia, 'Noto Sans', sans-serif;
 }
 
 body {
   background-color: var(--color-room);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -23,7 +23,7 @@ export function LanguageSelector({ language, voices, onChange }: LanguageSelecto
   const options = [...LANGUAGES, ...extra]
 
   return (
-    <label className="flex flex-col gap-1 text-sm text-ink-soft">
+    <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink-soft min-w-0">
       Language
       <select
         value={language}
@@ -32,10 +32,10 @@ export function LanguageSelector({ language, voices, onChange }: LanguageSelecto
           const fallback = pickDefaultVoice(voices, next)
           onChange(next, fallback?.voiceURI)
         }}
-        className="rounded-md border border-white/10 bg-room-2 px-3 py-1.5 text-sm text-ink-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+        className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-room px-3 py-2 text-sm font-normal text-ink-strong transition-colors hover:border-brass/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
       >
         {options.map((option) => (
-          <option key={option.code} value={option.code}>
+          <option key={option.code} value={option.code} className="bg-room-2 text-ink">
             {option.label}
           </option>
         ))}

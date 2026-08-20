@@ -48,12 +48,12 @@ export function VoiceSelector({ language, voiceURI, voices, voicesLoaded, onChan
 
   if (!hasMatch && !showAll) {
     return (
-      <div className="flex flex-col gap-1.5 text-sm">
-        <p className="text-rose">No {languageLabel(language)} voice is available on this device.</p>
+      <div className="flex flex-col gap-2 rounded-lg border border-rose-soft/40 bg-rose-soft/20 p-3 text-sm">
+        <p className="text-rose text-xs font-medium">No {languageLabel(language)} voice is available on this device.</p>
         <button
           type="button"
           onClick={() => setShowAll(true)}
-          className="self-start rounded px-1 text-brass underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+          className="self-start rounded text-xs font-medium text-brass underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
         >
           Show all available voices
         </button>
@@ -61,19 +61,43 @@ export function VoiceSelector({ language, voiceURI, voices, voicesLoaded, onChan
     )
   }
 
-  const options = hasMatch ? matching : prioritizeVoicesByLanguage(voices, language)
+  const baseOptions = hasMatch ? matching : prioritizeVoicesByLanguage(voices, language)
+  const activeVoice = voiceURI ? voices.find((v) => v.voiceURI === voiceURI) : undefined
+  const options =
+    activeVoice && !baseOptions.some((v) => v.voiceURI === voiceURI)
+      ? [activeVoice, ...baseOptions]
+      : baseOptions
 
   return (
-    <label className="flex flex-col gap-1 text-sm text-ink-soft">
-      Voice
+    <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink-soft min-w-0">
+      <div className="flex items-center justify-between">
+        <span>Voice</span>
+        {hasMatch && !showAll ? (
+          <button
+            type="button"
+            onClick={() => setShowAll(true)}
+            className="text-[0.7rem] font-normal normal-case text-ink-soft hover:text-brass transition-colors"
+          >
+            Show all ({voices.length})
+          </button>
+        ) : hasMatch && showAll ? (
+          <button
+            type="button"
+            onClick={() => setShowAll(false)}
+            className="text-[0.7rem] font-normal normal-case text-ink-soft hover:text-brass transition-colors"
+          >
+            Show {languageLabel(language)} only
+          </button>
+        ) : null}
+      </div>
       <select
         value={voiceURI ?? ''}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-md border border-white/10 bg-room-2 px-3 py-1.5 text-sm text-ink-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+        className="w-full min-w-0 truncate rounded-lg border border-[var(--color-border)] bg-room px-3 py-2 text-sm font-normal text-ink-strong transition-colors hover:border-brass/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
       >
         {!voiceURI && <option value="">Select a voice…</option>}
         {options.map((voice) => (
-          <option key={voice.voiceURI} value={voice.voiceURI}>
+          <option key={voice.voiceURI} value={voice.voiceURI} className="bg-room-2 text-ink">
             {formatVoiceLabel(voice)}
           </option>
         ))}

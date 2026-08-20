@@ -37,19 +37,23 @@ export class BrowserTTSProvider implements TTSProvider {
     }
 
     const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = options.lang
     utterance.rate = options.rate
     utterance.pitch = options.pitch ?? 1
     utterance.volume = options.volume ?? 1
 
     const voice = options.voiceURI
-      ? window.speechSynthesis.getVoices().find((candidate) => candidate.voiceURI === options.voiceURI)
+      ? window.speechSynthesis.getVoices().find((candidate) => candidate.voiceURI === options.voiceURI || candidate.name === options.voiceURI)
       : undefined
     if (options.voiceURI && !voice) {
       callbacks?.onError?.({ code: 'voice-unavailable', message: `Voice "${options.voiceURI}" is not available.` })
       return
     }
-    if (voice) utterance.voice = voice
+    if (voice) {
+      utterance.voice = voice
+      utterance.lang = voice.lang || options.lang
+    } else {
+      utterance.lang = options.lang
+    }
 
     this.activeUtterance = utterance
 

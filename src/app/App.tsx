@@ -20,7 +20,7 @@ import { useBookStore } from '../store/bookStore'
 import { usePreferencesStore } from '../store/preferencesStore'
 import { useReaderStore } from '../store/readerStore'
 import { useSpeechStore } from '../store/speechStore'
-import { findVoiceByURI } from '../utils/language'
+import { baseLanguageCode, findVoiceByURI } from '../utils/language'
 import { hasNextPage, hasPreviousPage } from '../utils/page'
 import { stepPlaybackRate } from '../utils/settings'
 
@@ -53,7 +53,7 @@ export function App() {
     ocr.reset()
     useReaderStore.getState().goToPage(nextPage)
     await extractPage(nextPage)
-    play()
+    play(0)
   }
 
   const { play, pause, resume, stop } = useSpeech(handlePageComplete)
@@ -68,6 +68,8 @@ export function App() {
   const playback = useSpeechStore((state) => state.playback)
   const voices = useSpeechStore((state) => state.voices)
   const voicesLoaded = useSpeechStore((state) => state.voicesLoaded)
+  const chunks = useSpeechStore((state) => state.chunks)
+  const currentChunkIndex = useSpeechStore((state) => state.currentChunkIndex)
   const autoAdvance = usePreferencesStore((state) => state.preferences.autoAdvance)
   const language = usePreferencesStore((state) => state.preferences.language)
   const voiceURI = usePreferencesStore((state) => state.preferences.voiceURI)
@@ -149,7 +151,7 @@ export function App() {
     onPlayPause: () => {
       if (playback === 'playing') pause()
       else if (playback === 'paused') resume()
-      else if (canPlay) play()
+      else if (canPlay) play(useSpeechStore.getState().currentChunkIndex || 0)
     },
     onStop: stop,
     onNext: () => {
@@ -158,12 +160,23 @@ export function App() {
     onPrevious: () => {
       if (hasPreviousPage(currentPage)) handleNavigate(currentPage - 1)
     },
-    onIncreaseSpeed: () => usePreferencesStore.getState().update({ rate: stepPlaybackRate(rate, 1) }),
-    onDecreaseSpeed: () => usePreferencesStore.getState().update({ rate: stepPlaybackRate(rate, -1) }),
+    onIncreaseSpeed: () => {
+      const nextRate = stepPlaybackRate(rate, 1)
+      usePreferencesStore.getState().update({ rate: nextRate })
+      if (playback === 'playing') play(useSpeechStore.getState().currentChunkIndex)
+    },
+    onDecreaseSpeed: () => {
+      const nextRate = stepPlaybackRate(rate, -1)
+      usePreferencesStore.getState().update({ rate: nextRate })
+      if (playback === 'playing') play(useSpeechStore.getState().currentChunkIndex)
+    },
   })
 
   return (
     <AppLayout
+      bookTitle={book?.filename}
+      currentPage={currentPage}
+      totalPages={totalPages}
       status={statusMessage()}
       statusTone={error ? 'error' : 'neutral'}
       headerAction={
@@ -171,8 +184,11 @@ export function App() {
           <button
             type="button"
             onClick={handleCloseBook}
-            className="rounded-md border border-white/10 bg-transparent px-3.5 py-1.5 text-sm font-medium text-ink transition-colors hover:border-brass/40 hover:text-brass-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass"
+            className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-amber-600 px-4 py-2 text-xs font-bold text-room shadow-md shadow-amber-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/35 hover:scale-105 active:scale-95 cursor-pointer"
           >
+            <svg className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-90 text-room" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
             Upload new PDF
           </button>
         )
@@ -201,18 +217,36 @@ export function App() {
                   rate={rate}
                   voices={voices}
                   voicesLoaded={voicesLoaded}
-                  onLanguageChange={(nextLanguage, nextVoiceURI) =>
+                  onLanguageChange={(nextLanguage, nextVoiceURI) => {
                     usePreferencesStore.getState().update({ language: nextLanguage, voiceURI: nextVoiceURI })
-                  }
-                  onVoiceChange={(nextVoiceURI) => usePreferencesStore.getState().update({ voiceURI: nextVoiceURI })}
-                  onRateChange={(nextRate) => usePreferencesStore.getState().update({ rate: nextRate })}
+                    if (playback === 'playing') {
+                      play(useSpeechStore.getState().currentChunkIndex)
+                    }
+                  }}
+                  onVoiceChange={(nextVoiceURI) => {
+                    const selectedVoice = voices.find((v) => v.voiceURI === nextVoiceURI)
+                    const voiceBaseLang = selectedVoice ? baseLanguageCode(selectedVoice.lang) : undefined
+                    usePreferencesStore.getState().update({
+                      voiceURI: nextVoiceURI,
+                      ...(voiceBaseLang && voiceBaseLang !== language ? { language: voiceBaseLang } : {}),
+                    })
+                    if (playback === 'playing') {
+                      play(useSpeechStore.getState().currentChunkIndex)
+                    }
+                  }}
+                  onRateChange={(nextRate) => {
+                    usePreferencesStore.getState().update({ rate: nextRate })
+                    if (playback === 'playing') {
+                      play(useSpeechStore.getState().currentChunkIndex)
+                    }
+                  }}
                 />
                 <PlayerControls
                   playback={playback}
                   canPlay={canPlay}
                   hasPrevious={hasPreviousPage(currentPage)}
                   hasNext={hasNextPage(currentPage, totalPages)}
-                  onPlay={play}
+                  onPlay={() => play(useSpeechStore.getState().currentChunkIndex || 0)}
                   onPause={pause}
                   onResume={resume}
                   onStop={stop}
@@ -226,6 +260,9 @@ export function App() {
                 <ReaderText
                   pageText={pageText}
                   ocrState={ocr.state}
+                  chunks={chunks}
+                  currentChunkIndex={currentChunkIndex}
+                  playback={playback}
                   onRecognize={() => void handleRecognize()}
                   onAnswerConsent={ocr.answerConsent}
                 />

@@ -15,9 +15,9 @@ interface ReaderLayoutProps {
  */
 export function ReaderLayout({ viewer, sidebar }: ReaderLayoutProps) {
   return (
-    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[1fr_22rem] lg:items-start lg:gap-6">
-      {viewer}
-      <div className="flex flex-col gap-4">{sidebar}</div>
+    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_440px] 2xl:grid-cols-[minmax(0,1fr)_460px] lg:items-start lg:gap-8 xl:gap-10">
+      <div className="min-w-0 w-full">{viewer}</div>
+      <div className="flex flex-col gap-4 min-w-0 w-full">{sidebar}</div>
     </div>
   )
 }

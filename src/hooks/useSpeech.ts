@@ -64,7 +64,7 @@ export function useSpeech(onPageComplete?: () => void) {
     useSpeechStore.getState().setPlayback('playing')
   }, [])
 
-  const play = useCallback(() => {
+  const play = useCallback((startIndex = 0) => {
     const provider = providerRef.current
     if (!provider) return
 
@@ -77,6 +77,8 @@ export function useSpeech(onPageComplete?: () => void) {
     const session = ++sessionRef.current
     useSpeechStore.getState().setChunks(chunks)
     useSpeechStore.getState().setPlayback('playing')
+
+    const safeIndex = Math.min(Math.max(0, startIndex), chunks.length - 1)
 
     const speakFrom = (index: number) => {
       if (sessionRef.current !== session) return // superseded by stop() or a newer play()
@@ -111,7 +113,7 @@ export function useSpeech(onPageComplete?: () => void) {
       })
     }
 
-    speakFrom(0)
+    speakFrom(safeIndex)
   }, [])
 
   return { play, pause, resume, stop }

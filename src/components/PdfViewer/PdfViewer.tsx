@@ -17,9 +17,9 @@ interface PdfViewerProps {
  */
 export function PdfViewer({ currentPage, totalPages, render, onNavigate }: PdfViewerProps) {
   return (
-    <section aria-label="PDF viewer" className="flex flex-col items-center gap-4">
-      <div className="w-full rounded-xl bg-page p-4 shadow-[0_0_40px_-18px_var(--color-brass)] sm:p-6">
-        <div className="max-h-[65dvh] overflow-y-auto">
+    <section aria-label="PDF viewer" className="flex flex-col items-center gap-5">
+      <div className="w-full overflow-hidden rounded-2xl bg-page p-4 sm:p-6 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.06)] ring-1 ring-black/5">
+        <div className="max-h-[68dvh] overflow-y-auto rounded-lg">
           <PageCanvas pageNumber={currentPage} render={render} />
         </div>
       </div>
