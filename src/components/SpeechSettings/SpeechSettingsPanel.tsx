@@ -9,6 +9,7 @@ interface SpeechSettingsPanelProps {
   rate: number
   voices: readonly Voice[]
   voicesLoaded: boolean
+  allowedLanguageCodes: readonly string[]
   onLanguageChange(language: string, voiceURI: string | undefined): void
   onVoiceChange(voiceURI: string): void
   onRateChange(rate: number): void
@@ -21,6 +22,7 @@ export function SpeechSettingsPanel({
   rate,
   voices,
   voicesLoaded,
+  allowedLanguageCodes,
   onLanguageChange,
   onVoiceChange,
   onRateChange,
@@ -36,7 +38,12 @@ export function SpeechSettingsPanel({
         </span>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <LanguageSelector language={language} voices={voices} onChange={onLanguageChange} />
+        <LanguageSelector
+          language={language}
+          voices={voices}
+          allowedCodes={allowedLanguageCodes}
+          onChange={onLanguageChange}
+        />
         <SpeedControl rate={rate} onChange={onRateChange} />
       </div>
       <div className="w-full min-w-0">
