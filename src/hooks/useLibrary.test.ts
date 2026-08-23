@@ -1,11 +1,17 @@
 import 'fake-indexeddb/auto'
 import { cleanup, renderHook, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { saveBook } from '../services/storage/bookStorage'
 import { resetDbForTests } from '../services/storage/db'
 import { saveProgress } from '../services/storage/progressStorage'
+import * as libraryApi from '../services/sync/libraryApi'
+import * as progressApi from '../services/sync/progressApi'
+import { useAuthStore } from '../store/authStore'
 import type { BookSummary } from '../types/book'
 import { useLibrary } from './useLibrary'
+
+vi.mock('../services/sync/libraryApi')
+vi.mock('../services/sync/progressApi')
 
 function book(overrides: Partial<BookSummary> = {}): BookSummary {
   return {
@@ -22,6 +28,8 @@ function book(overrides: Partial<BookSummary> = {}): BookSummary {
 beforeEach(() => {
   indexedDB = new IDBFactory()
   resetDbForTests()
+  vi.resetAllMocks()
+  useAuthStore.setState({ user: undefined, status: 'idle', error: undefined })
 })
 
 afterEach(() => {
@@ -36,7 +44,7 @@ describe('useLibrary (PRD §25/§26)', () => {
     const { result } = renderHook(() => useLibrary())
     await waitFor(() => expect(result.current.loaded).toBe(true))
 
-    expect(result.current.entries).toEqual([{ summary, progress: undefined }])
+    expect(result.current.entries).toEqual([{ summary, progress: undefined, hasFile: true }])
   })
 
   it('pairs a book with its progress record', async () => {
@@ -52,7 +60,7 @@ describe('useLibrary (PRD §25/§26)', () => {
     const { result } = renderHook(() => useLibrary())
     await waitFor(() => expect(result.current.loaded).toBe(true))
 
-    expect(result.current.entries).toEqual([{ summary, progress }])
+    expect(result.current.entries).toEqual([{ summary, progress, hasFile: true }])
   })
 
   it('orders by most recently read, not most recently added', async () => {
@@ -100,5 +108,54 @@ describe('useLibrary (PRD §25/§26)', () => {
     await result.current.refresh()
 
     await waitFor(() => expect(result.current.entries).toHaveLength(1))
+  })
+
+  describe('when authenticated', () => {
+    beforeEach(() => {
+      useAuthStore.setState({ status: 'authenticated' })
+    })
+
+    it('does not call the sync services when signed out', async () => {
+      useAuthStore.setState({ status: 'idle' })
+      const { result } = renderHook(() => useLibrary())
+      await waitFor(() => expect(result.current.loaded).toBe(true))
+
+      expect(libraryApi.fetchLibrary).not.toHaveBeenCalled()
+    })
+
+    it('merges in a server-only book and marks it as not present on this device', async () => {
+      const remoteOnly = book({ bookId: 'remote', filename: 'remote.pdf' })
+      vi.mocked(libraryApi.fetchLibrary).mockResolvedValue([remoteOnly])
+      vi.mocked(progressApi.fetchProgress).mockResolvedValue([])
+
+      const { result } = renderHook(() => useLibrary())
+      await waitFor(() => expect(result.current.loaded).toBe(true))
+
+      expect(result.current.entries).toEqual([{ summary: remoteOnly, progress: undefined, hasFile: false }])
+    })
+
+    it('marks a locally-saved book as hasFile even when it also exists remotely', async () => {
+      const summary = book()
+      await saveBook(summary, new Blob(['%PDF']))
+      vi.mocked(libraryApi.fetchLibrary).mockResolvedValue([summary])
+      vi.mocked(progressApi.fetchProgress).mockResolvedValue([])
+
+      const { result } = renderHook(() => useLibrary())
+      await waitFor(() => expect(result.current.loaded).toBe(true))
+
+      expect(result.current.entries).toEqual([{ summary, progress: undefined, hasFile: true }])
+    })
+
+    it('falls back to local-only data when the server sync fails', async () => {
+      const summary = book()
+      await saveBook(summary, new Blob(['%PDF']))
+      vi.mocked(libraryApi.fetchLibrary).mockRejectedValue(new Error('network error'))
+      vi.mocked(progressApi.fetchProgress).mockResolvedValue([])
+
+      const { result } = renderHook(() => useLibrary())
+      await waitFor(() => expect(result.current.loaded).toBe(true))
+
+      expect(result.current.entries).toEqual([{ summary, progress: undefined, hasFile: true }])
+    })
   })
 })

@@ -99,6 +99,28 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/*
+ * The landing page's signature moment: sentences on the hero's lit page
+ * light up in turn, echoing the real in-app chunk-highlighting the product
+ * does while reading aloud (PRD §23) — the demo instead of a screenshot of
+ * one. Each sentence gets the same animation with a staggered delay (set
+ * inline per span) so exactly one is lit at a time, looping.
+ */
+@keyframes hero-sentence-highlight {
+  0%,
+  3% {
+    background-color: transparent;
+  }
+  9%,
+  24% {
+    background-color: color-mix(in srgb, var(--color-brass) 32%, transparent);
+  }
+  30%,
+  100% {
+    background-color: transparent;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
