@@ -62,6 +62,15 @@ export type ReaderErrorCode =
   | 'ocr-language-unsupported'
   | 'storage-quota-exceeded'
   | 'storage-unavailable'
+  | 'auth-required'
+  | 'invalid-credentials'
+  | 'sync-failed'
+  | 'account-suspended'
+  | 'forbidden'
+  | 'signups-disabled'
+  | 'maintenance-mode'
+  | 'password-too-short'
+  | 'not-found'
 
 export interface ReaderError {
   code: ReaderErrorCode

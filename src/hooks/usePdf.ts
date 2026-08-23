@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef } from 'react'
 import { loadPdfDocument, type PdfDocumentHandle } from '../services/pdf/pdfService'
 import { getBookFile, saveBook } from '../services/storage/bookStorage'
 import { getProgress } from '../services/storage/progressStorage'
+import { upsertLibraryBook } from '../services/sync/libraryApi'
+import { useAuthStore } from '../store/authStore'
 import { useBookStore } from '../store/bookStore'
 import { usePreferencesStore } from '../store/preferencesStore'
 import { useReaderStore } from '../store/readerStore'
@@ -90,6 +92,12 @@ export function usePdf() {
         await saveBook(summary, file)
       } catch (cause) {
         useReaderStore.getState().setError(toAppError(cause, 'storage-quota-exceeded', 'This book could not be saved for next time.'))
+      }
+
+      // Best-effort account sync (never blocks the local save above, and a
+      // failure here is silent — the book is already safely stored locally).
+      if (useAuthStore.getState().status === 'authenticated') {
+        void upsertLibraryBook(summary).catch(() => undefined)
       }
     } catch (cause) {
       await closeDocument()

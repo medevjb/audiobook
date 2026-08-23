@@ -24,7 +24,7 @@ describe('RecentBooks (PRD §25)', () => {
   })
 
   it('shows "page 1" for a book with no saved progress', () => {
-    const entries: LibraryEntry[] = [{ summary: summary() }]
+    const entries: LibraryEntry[] = [{ summary: summary(), hasFile: true }]
     render(<RecentBooks entries={entries} onOpen={vi.fn()} />)
     expect(screen.getByText('Page 1 / 324')).toBeInTheDocument()
   })
@@ -34,6 +34,7 @@ describe('RecentBooks (PRD §25)', () => {
       {
         summary: summary(),
         progress: { bookId: 'b1', filename: 'book.pdf', currentPage: 57, totalPages: 324, updatedAt: 1 },
+        hasFile: true,
       },
     ]
     render(<RecentBooks entries={entries} onOpen={vi.fn()} />)
@@ -43,7 +44,7 @@ describe('RecentBooks (PRD §25)', () => {
   it('opens the book when the row is clicked', async () => {
     const user = userEvent.setup()
     const onOpen = vi.fn()
-    const entry: LibraryEntry = { summary: summary() }
+    const entry: LibraryEntry = { summary: summary(), hasFile: true }
     render(<RecentBooks entries={[entry]} onOpen={onOpen} />)
 
     await user.click(screen.getByText('book.pdf'))
@@ -51,7 +52,7 @@ describe('RecentBooks (PRD §25)', () => {
   })
 
   it('offers "start over" only when there is real progress to discard', () => {
-    const noProgress: LibraryEntry[] = [{ summary: summary({ bookId: 'a' }) }]
+    const noProgress: LibraryEntry[] = [{ summary: summary({ bookId: 'a' }), hasFile: true }]
     render(<RecentBooks entries={noProgress} onOpen={vi.fn()} />)
     expect(screen.queryByRole('button', { name: 'Start over' })).not.toBeInTheDocument()
   })
@@ -62,10 +63,19 @@ describe('RecentBooks (PRD §25)', () => {
     const entry: LibraryEntry = {
       summary: summary(),
       progress: { bookId: 'b1', filename: 'book.pdf', currentPage: 57, totalPages: 324, updatedAt: 1 },
+      hasFile: true,
     }
     render(<RecentBooks entries={[entry]} onOpen={onOpen} />)
 
     await user.click(screen.getByRole('button', { name: 'Start over' }))
     expect(onOpen).toHaveBeenCalledWith(entry, 1)
+  })
+
+  it('shows a "not on this device" entry for synced-but-not-local books instead of a dead Open button', () => {
+    const entry: LibraryEntry = { summary: summary(), hasFile: false }
+    render(<RecentBooks entries={[entry]} onOpen={vi.fn()} />)
+
+    expect(screen.getByText('book.pdf')).toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })
