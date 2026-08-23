@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "npm --prefix server run dev",
+    "dev:all": "concurrently -n web,api -c blue,magenta \"npm:dev\" \"npm:dev:server\"",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
@@ -19,6 +21,7 @@
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.2",
     "tesseract.js": "^7.0.0",
     "zustand": "^5.0.15"
   },
@@ -31,6 +34,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "concurrently": "^9.2.1",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^30.0.1",
     "oxlint": "^1.75.0",
@@ -38,5 +42,9 @@
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true,
+    "tesseract.js@7.0.0": true
   }
 }

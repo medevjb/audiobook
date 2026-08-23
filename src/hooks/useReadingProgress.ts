@@ -1,5 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { saveProgress } from '../services/storage/progressStorage'
+import { upsertProgress } from '../services/sync/progressApi'
+import { useAuthStore } from '../store/authStore'
 import { useBookStore } from '../store/bookStore'
 import { usePreferencesStore } from '../store/preferencesStore'
 import { useReaderStore } from '../store/readerStore'
@@ -36,6 +38,11 @@ export function useReadingProgress() {
     })
 
     useReaderStore.getState().setProgress(progress)
+
+    // Best-effort account sync — never blocks the local save above.
+    if (useAuthStore.getState().status === 'authenticated') {
+      void upsertProgress(progress).catch(() => undefined)
+    }
   }, [])
 
   // A stable object identity so callers can depend on the return value itself

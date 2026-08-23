@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { AdminLink } from '../Auth/AdminLink'
+import { UserMenu } from '../Auth/UserMenu'
 import { ThemeToggle } from '../ThemeToggle/ThemeToggle'
 
 interface AppHeaderProps {
@@ -102,6 +104,8 @@ export function AppHeader({ bookTitle, currentPage, totalPages, action }: AppHea
           {/* Right side: Mode Switcher + Action CTA */}
           <div className="flex items-center gap-2.5">
             <ThemeToggle />
+            <AdminLink />
+            <UserMenu />
             {action}
           </div>
         </div>

@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Server secrets — never commit real DB credentials
+server/.env
+server/.env.test
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
