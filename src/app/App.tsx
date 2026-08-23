@@ -10,9 +10,11 @@ import { SpeechSettingsPanel } from '../components/SpeechSettings/SpeechSettings
 import { HomeScreen } from '../components/Upload/HomeScreen'
 import type { LibraryEntry } from '../hooks/useLibrary'
 import { useLibrary } from '../hooks/useLibrary'
+import { useAllowedLanguages } from '../hooks/useAllowedLanguages'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { useOcr } from '../hooks/useOcr'
 import { usePdf } from '../hooks/usePdf'
+import { usePreferencesSync } from '../hooks/usePreferencesSync'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { useSpeech } from '../hooks/useSpeech'
 import { useVoices } from '../hooks/useVoices'
@@ -31,8 +33,10 @@ import { stepPlaybackRate } from '../utils/settings'
 export function App() {
   const { openFile, openStoredBook, renderPage, renderPageForOcr, extractPage, closeBook } = usePdf()
   const progress = useReadingProgress()
+  const preferencesSync = usePreferencesSync()
   const library = useLibrary()
   const ocr = useOcr()
+  const allowedLanguageCodes = useAllowedLanguages()
   useVoices()
 
   /**
@@ -100,6 +104,13 @@ export function App() {
   useEffect(() => {
     if (bookId && status === 'ready') void progress.save()
   }, [bookId, currentPage, status, language, voiceURI, rate, autoAdvance, progress])
+
+  // Syncs global preferences to the account (best-effort, no-op when signed
+  // out) — separate from the per-book progress effect above since these are
+  // account-wide defaults, not tied to any one book being open.
+  useEffect(() => {
+    void preferencesSync.save()
+  }, [language, voiceURI, rate, autoAdvance, preferencesSync])
 
   function statusMessage(): string {
     if (isLoading) return 'Loading PDF…'
@@ -217,6 +228,7 @@ export function App() {
                   rate={rate}
                   voices={voices}
                   voicesLoaded={voicesLoaded}
+                  allowedLanguageCodes={allowedLanguageCodes}
                   onLanguageChange={(nextLanguage, nextVoiceURI) => {
                     usePreferencesStore.getState().update({ language: nextLanguage, voiceURI: nextVoiceURI })
                     if (playback === 'playing') {
